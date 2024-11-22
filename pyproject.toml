@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "terminal-use"
+version = "0.1.0"
+description = "A package for using LLM to perform tasks in terminals"
+readme = "README.md"
+requires-python = ">=3.11.10"
+license = { text = "MIT License" }
+authors = [
+    { name = "Kai Xu", email = "me@xuk.ai" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+dependencies = []
+
+[project.urls]
+"Homepage" = "https://github.com/xukai92/terminal-use"
+
+[project.scripts]
+terminal-use = "terminal_use.main:cli"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
