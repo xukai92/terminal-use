@@ -15,3 +15,16 @@ terminal-use "delete the pdf files unrelated to ai in the current directory"
 ```bash
 terminal-use "commit the modified python files via git"
 ```
+
+## Installation
+
+
+```bash
+pip install git+https://github.com/xukai92/terminal-use.git
+```
+or
+```bash
+git clone https://github.com/xukai92/terminal-use.git
+cd terminal-use
+pip install -e .
+```
