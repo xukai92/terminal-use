@@ -17,7 +17,13 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent"
 ]
-dependencies = []
+dependencies = [
+    "langchain-openai",
+    "pydantic",
+    "langchain-core",
+    "prompt_toolkit",
+    "click"
+]
 
 [project.urls]
 "Homepage" = "https://github.com/xukai92/terminal-use"
