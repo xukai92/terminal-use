@@ -1,6 +1,7 @@
 from langchain_openai import ChatOpenAI
 
 def init_model():
+    # initialize the model with gpt-4o-mini
     return ChatOpenAI(model="gpt-4o-mini")
 
 import sys
@@ -10,9 +11,10 @@ from pydantic import BaseModel, Field
 from langchain_core.messages import HumanMessage, SystemMessage
 from prompt_toolkit import PromptSession, print_formatted_text
 from prompt_toolkit.styles import Style
+# define color styles for different parts of the output
 STYLE = Style.from_dict({
     'header': '#00aa00 bold',
-    'prompt': '#0000aa',
+    'prompt': '#0000aa', 
     'plan': '#888888',
     'next_action': '#00aa00',
 })
@@ -20,6 +22,7 @@ from prompt_toolkit.formatted_text import FormattedText
 import logging
 logging.basicConfig(format='%(asctime)s - %(levelname)s -\n%(message)s')
 
+# base system message defining the assistant's role and limitations
 SYSTEM_MESSAGE = (
     "You are a helpful assistant that can complete tasks in the terminal. "
     "You complete a task by multiple steps where each action describes a command to be issued. "
@@ -27,6 +30,7 @@ SYSTEM_MESSAGE = (
     "After each command, you will receive the output of the command. "
 )
 
+# system message for the planner component that creates the initial task plan
 SYSTEM_MESSAGE_PLANNER = SYSTEM_MESSAGE + (
     "Now you are given the task to complete. "
     "The input is a dictionary with one key: 'task'. "
@@ -38,6 +42,7 @@ SYSTEM_MESSAGE_PLANNER = SYSTEM_MESSAGE + (
     "  - The 'plan' key is a list of steps to be performed in natural language. "
 )
 
+# pydantic model for planner output validation
 class PlannerOutputDict(BaseModel):
     plan: list[str] = Field(description="The plan to be performed")
 
@@ -53,6 +58,7 @@ class PlannerOutputDict(BaseModel):
             f")"
         )
 
+# system message for the runner component that executes individual steps
 SYSTEM_MESSAGE_RUNNER = SYSTEM_MESSAGE + (
     "Now you are given the task to complete, the current plan for the task, the index of the current action, and a history of commands you have issued and their outputs. "
     "The input is a dictionary with four keys: 'task', 'plan', 'current_action', and 'history'. "
@@ -67,6 +73,7 @@ SYSTEM_MESSAGE_RUNNER = SYSTEM_MESSAGE + (
     "- The 'command' key is the next command to be issued. "
 )
 
+# pydantic model for runner output validation
 class RunnerOutputDcit(BaseModel):
     command: str = Field(description="The next command to be issued")
 
@@ -77,6 +84,7 @@ class RunnerOutputDcit(BaseModel):
             f")"
         )
 
+# shared input message for components that need task, plan, last action and history
 SYSTEM_MESSAGE_LAST_STEP_INPUT = (
     "Now you are given the task to complete, the current plan for the task, the index of the last action, and a history of commands you have issued and their outputs. "
     "The input is a dictionary with four keys: 'task', 'plan', 'last_action', and 'history'. "
@@ -87,6 +95,8 @@ SYSTEM_MESSAGE_LAST_STEP_INPUT = (
     "  - The 'command' key is a shell command that was issued. "
     "  - The 'output' key is the output of the command. "
 )
+
+# system message for the verifier component that checks task completion
 SYSTEM_MESSAGE_VERIFIER = SYSTEM_MESSAGE + SYSTEM_MESSAGE_LAST_STEP_INPUT + (
     "Based on the task, the plan, the last action, and the history, verify if the task is complete. "
     "Your output should be a dictionary with one key: 'is_completed'. "
@@ -94,6 +104,7 @@ SYSTEM_MESSAGE_VERIFIER = SYSTEM_MESSAGE + SYSTEM_MESSAGE_LAST_STEP_INPUT + (
     "  - If not completed, the 'is_completed' should be set to false. "
 )
 
+# pydantic model for verifier output validation
 class VerifierOutputDcit(BaseModel):
     is_completed: bool = Field(description="Whether the task is completed")
 
@@ -104,6 +115,7 @@ class VerifierOutputDcit(BaseModel):
             f")"
         )
 
+# system message for the reviser component that updates the plan
 SYSTEM_MESSAGE_REVISER = SYSTEM_MESSAGE + SYSTEM_MESSAGE_LAST_STEP_INPUT +(
     "Based on the task, the plan, the last action, and the history, revise the plan and point to the next action. "
     "Only revise the steps after the last action. "
@@ -114,6 +126,7 @@ SYSTEM_MESSAGE_REVISER = SYSTEM_MESSAGE + SYSTEM_MESSAGE_LAST_STEP_INPUT +(
     "  - The 'next_action' key is the index of the next action in the revised plan. "
 )
 
+# pydantic model for reviser output validation
 class ReviserOutputDcit(BaseModel):
     revised_plan: list[str] = Field(description="The revised plan to be performed")
     next_action: int = Field(description="The index of the next action in the revised plan")
@@ -130,6 +143,7 @@ class ReviserOutputDcit(BaseModel):
             f")"
         )
 
+# system message for checking if commands have side effects
 SYSTEM_MESSAGE_SIDE_EFFECT_CHECKER = SYSTEM_MESSAGE + (
     "Now you are given a command. "
     "Check if the command has side effects. "
@@ -140,9 +154,11 @@ SYSTEM_MESSAGE_SIDE_EFFECT_CHECKER = SYSTEM_MESSAGE + (
     "  - If the command does not have side effects, the 'has_side_effects' should be set to false. "
 )
 
+# pydantic model for side effect checker output validation
 class SideEffectCheckerOutputDict(BaseModel):
     has_side_effects: bool = Field(description="Whether the command has side effects")
 
+# default configuration values
 class DefaultConfig:
     skip_1st_check: bool = False
     execution_type: str = "smart"
@@ -150,6 +166,7 @@ class DefaultConfig:
 
 import click
 
+# CLI interface using click
 @click.command()
 @click.argument('task', type=str)
 @click.option('-s', '--skip-1st-check', is_flag=True, default=False,
@@ -161,6 +178,7 @@ import click
 def cli(task: str, skip_1st_check: bool, execution_type: str, max_queries: int):
     use_llm_to_perform_tasks_in_terminal(task, skip_1st_check, execution_type, max_queries)
 
+# main function that orchestrates the task execution
 def use_llm_to_perform_tasks_in_terminal(
     task: str,
     skip_1st_check: bool=DefaultConfig.skip_1st_check,
@@ -169,10 +187,11 @@ def use_llm_to_perform_tasks_in_terminal(
 ):
     logging.info(f"{task=}")
 
+    # initialize the language model
     model = init_model()
     logging.info(f"{model=}")
 
-    # initial plan
+    # get initial plan from the planner
     plan = model.with_structured_output(PlannerOutputDict).invoke([
         SystemMessage(content=SYSTEM_MESSAGE_PLANNER),
         HumanMessage(content=json.dumps({"task": task})),
@@ -181,10 +200,12 @@ def use_llm_to_perform_tasks_in_terminal(
     current_step_idx = 0
     history = []
 
+    # main execution loop
     for i in range(max_queries - 1):
         idict = {"task": task, "plan": plan, "current_action": current_step_idx, "history": history}
         logging.info(f"{idict=}")
 
+        # get next command from runner
         odict = model.with_structured_output(RunnerOutputDcit).invoke([
             SystemMessage(content=SYSTEM_MESSAGE_RUNNER),
             HumanMessage(content=json.dumps(idict)),
@@ -192,21 +213,22 @@ def use_llm_to_perform_tasks_in_terminal(
         logging.info(f"{odict=}")
         current_command = odict.command
         
+        # skip if command is repeated
         if len(history) > 0 and current_command == history[-1]["command"]:
             logging.info("command is the same as the previous command, skipping...")
             continue
 
-        # create prompt session with custom style
+        # setup interactive prompt session
         prompt_session = PromptSession(style=STYLE)
 
-        # format plan with arrow pointing to next action
+        # format plan display with arrow indicator
         plan_message = []
         for step_idx, action in enumerate(plan):
             prefix = "-> " if step_idx == current_step_idx else "   "
             plan_message.append(('class:plan' if step_idx != current_step_idx else 'class:next_action', 
                                f"{prefix}{action}\n"))
 
-        # show command and get user input
+        # prepare display message
         prompt_message = [
             ('class:header', '[Terminal Use]' + (" Task started!" if i == 0 else "") + '\n'),
             ('class:header', f"Task: {task}\n"),
@@ -217,6 +239,7 @@ def use_llm_to_perform_tasks_in_terminal(
         ]
         
         try:
+            # determine if command needs user confirmation
             if i == 0 and not skip_1st_check:
                 execute_without_prompt = False
             elif execution_type == "safe":
@@ -231,6 +254,7 @@ def use_llm_to_perform_tasks_in_terminal(
             elif execution_type == "all":
                 execute_without_prompt = True
 
+            # execute command with or without prompt
             if execute_without_prompt:
                 prompt_message = prompt_message[1:-2] if i > 0 else prompt_message[:-2]
                 prompt_message.append(('class:prompt', f">> {current_command}"))
@@ -240,7 +264,7 @@ def use_llm_to_perform_tasks_in_terminal(
                 response = prompt_session.prompt(prompt_message, default=current_command)
 
             if response.lower() != 'n':
-                # execute the edited command and capture output
+                # execute command and capture output
                 try:
                     output = subprocess.check_output(response, shell=True, text=True, stderr=subprocess.STDOUT)
                 except subprocess.CalledProcessError as e:
@@ -255,6 +279,7 @@ def use_llm_to_perform_tasks_in_terminal(
             logging.info("exiting...")
             sys.exit(0)
 
+        # check if task is complete
         idict = {"task": task, "plan": plan, "last_action": current_step_idx, "history": history}
         logging.info(f"{idict=}")
 
@@ -267,6 +292,7 @@ def use_llm_to_perform_tasks_in_terminal(
         if odict.is_completed:
             break
         
+        # revise plan if task not complete
         odict = model.with_structured_output(ReviserOutputDcit).invoke([
             SystemMessage(content=SYSTEM_MESSAGE_REVISER),
             HumanMessage(content=json.dumps(idict)),
