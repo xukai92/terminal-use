@@ -18,11 +18,11 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 dependencies = [
-    "langchain-openai",
-    "pydantic",
-    "langchain-core",
-    "prompt_toolkit",
-    "click"
+    "langchain-openai>=0.2.9",
+    "pydantic>=2.10.0",
+    "langchain-core>=0.3.19",
+    "prompt_toolkit>=3.0.48",
+    "click>=8.1.7"
 ]
 
 [project.urls]
